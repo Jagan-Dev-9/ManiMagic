@@ -1,26 +1,31 @@
 import { spawn } from "child_process";
-import fs from "fs";
+import fs, { link } from "fs";
 import path from "path";
-import os from "os";
+import os, { endianness } from "os";
 import { NextRequest, NextResponse } from "next/server";
 
-export async function POST(request: NextRequest) {
+export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
     let code: string;
     let uploadedFiles: any[] = [];
 
     // Check if request is FormData (for file uploads) or JSON
     const contentType = request.headers.get("content-type");
+    console.log("Request content-type:", contentType);
     
     if (contentType?.includes("multipart/form-data")) {
       // Handle FormData with file uploads
       const formData = await request.formData();
       code = formData.get("code") as string;
+      console.log("FormData code length:", code?.length || 0);
       
       // Handle uploaded files
       const fileEntries = formData.getAll("file");
+      console.log("Number of files in FormData:", fileEntries.length);
+      
       for (const file of fileEntries) {
         if (file instanceof File) {
+          console.log("Processing file:", file.name, "type:", file.type, "size:", file.size);
           uploadedFiles.push({
             name: file.name,
             size: file.size,
@@ -227,21 +232,29 @@ def interpolate_colors(color1, color2, steps):
     console.log("Processing uploaded files:", uploadedFiles?.length || 0);
     if (uploadedFiles && uploadedFiles.length > 0) {
       for (const file of uploadedFiles) {
-        console.log("Writing file:", file.name, "Content type:", typeof file.content);
+        console.log("Writing file:", file.name, "Content type:", typeof file.content, "Length:", file.content?.length);
         const filePath = path.join(tempDir, file.name);
         
-        if (typeof file.content === 'string') {
-          if (file.content.startsWith('data:')) {
-            // Handle base64 encoded files (images)
-            const base64Data = file.content.split(',')[1];
-            const buffer = Buffer.from(base64Data, 'base64');
-            fs.writeFileSync(filePath, buffer);
-            console.log("✓ Wrote base64 file:", file.name);
+        try {
+          if (typeof file.content === 'string') {
+            if (file.content.startsWith('data:')) {
+              // Handle base64 encoded files (images)
+              const base64Data = file.content.split(',')[1];
+              const buffer = Buffer.from(base64Data, 'base64');
+              fs.writeFileSync(filePath, buffer);
+              console.log("✓ Wrote base64 file:", file.name);
+            } else {
+              // Handle text files (SVG content)
+              fs.writeFileSync(filePath, file.content, 'utf8');
+              console.log("✓ Wrote SVG file:", file.name, "Size:", file.content.length, "bytes");
+            }
           } else {
-            // Handle text files (SVG content)
-            fs.writeFileSync(filePath, file.content, 'utf8');
-            console.log("✓ Wrote SVG file:", file.name);
+            console.log("❌ Invalid file content type for:", file.name, typeof file.content);
           }
+        } catch (fileError) {
+          console.error("❌ Error writing file:", file.name, fileError);
+          const errorMessage = fileError instanceof Error ? fileError.message : String(fileError);
+          throw new Error(`Failed to write file ${file.name}: ${errorMessage}`);
         }
       }
       
@@ -380,9 +393,78 @@ def interpolate_colors(color1, color2, steps):
     });
 
   } catch (error) {
+    console.error("API Error:", error);
     return NextResponse.json(
-      { error: "Invalid request" }, 
-      { status: 400 }
+      { error: `Server error: ${error instanceof Error ? error.message : 'Unknown error'}` }, 
+      { status: 500 }
     );
   }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
